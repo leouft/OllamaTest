@@ -1,6 +1,6 @@
-import ollama, json
+import ollama, json, copy
 
-modelo = "gemma4"
+modelo = "llama3.2"
 history_save_file = "all_history.json"
 file_code_name = "main.py"
 
@@ -30,6 +30,7 @@ history = [
         )
     }
 ]
+start_history = copy.deepcopy(history)
 
 def chat_with_context(messages, modelo):
     try:
@@ -109,29 +110,70 @@ cManager = ConversationManager(file_code_name, history_save_file)
 cManager.load_context()
 
 while True:
-    message = input("Usuário: ")
+    command = True
+    print
+    message = input("Usuário (/help ou /? para ver comandos): ")
     print()
-    if message == "/exit":
-        cManager.save_session()
-        break
 
-    elif message == "/delete":
-        with open(history_save_file, "w", encoding="utf-8") as file:
-            json.dump([], file)
-        print("Histórico apagado.")
-        break
+    match message:
+        case "/help" | "/?":
+            print(
+                f"{'/help':<6} {'- mostra essa mensagem':<15}\n"
+                f"{'/exit':<6} {'- salva e encerra':<15}\n"
+                f"{'/delete':<6} {'- apaga o histórico salvo':<15}\n"
+                f"{'/code':<6} {'- mostra o código enviado ao modelo':<15}\n"
+                f"{'/clear':<6} {'- limpa o contexto atual':<15}\n"
+                f"{'/history':<6} {'- mostra a quantidade de mensagens':<15}\n")
+        case "/exit":
+            cManager.save_session()
+            break
+        case "/delete":
+            with open(history_save_file, "w", encoding="utf-8") as file:
+                json.dump([], file)
+                history.clear()
+                print("Histórico apagado.")
+                break
+        case "/code":
+            with open(file_code_name, "r", encoding="utf-8") as file:
+                code = file.read()
+            print(code+"\n")
+        case "/clear":
+            history.clear()
+            history.extend(start_history)
+        case "/history":
+            assistant = 0
+            user = 0
+            system = 0
 
-    context = history.copy() # context é uma memória temporária da conversa
+            for messageInHistory in history:
+                if messageInHistory["role"] == "user":
+                    user += 1
 
-    code_message = cManager.load_code()
-    if code_message:
-        context.append(code_message)
+                elif messageInHistory["role"] == "assistant":
+                    assistant += 1
 
-    context.append({"role": "user", "content": message})
+                elif messageInHistory["role"] == "system":
+                    system += 1
 
-    response = chat_with_context(context, modelo)
+            print(f"Mensagens do usuário: {user}")
+            print(f"Mensagens do Kernel: {assistant}")
+            print(f"Mensagens do sistema: {system}\n")
+        case _:
+            command = False
+            context = history.copy() # context é uma memória temporária da conversa
 
-    print(f"Kernel: {response}\n")
+            code_message = cManager.load_code()
+            if code_message:
+                context.append(code_message)
 
-    history.append({"role": "user", "content": message})
-    history.append({"role": "assistant", "content": response})
+            context.append({"role": "user", "content": message})
+
+            response = chat_with_context(context, modelo)
+
+            print(f"Kernel: {response}\n")
+
+            history.append({"role": "user", "content": message})
+            history.append({"role": "assistant", "content": response})
+
+    if command:
+        history.append({"role": "user", "content": message})
