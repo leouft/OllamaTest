@@ -4,7 +4,7 @@ modelo = "gemma4"
 history_save_file = "all_history.json"
 file_code_name = "main.py"
 
-# history é a memória local que será salva no disco rigido
+# history é a memória local que será salva no disco rigido, insira aqui o contexto inicial pra ele
 history = [ 
     {
         "role": "system", 
