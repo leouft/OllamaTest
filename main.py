@@ -1,6 +1,6 @@
 import ollama, json, copy
 
-modelo = "llama3.2"
+modelo = "gemma4"
 history_save_file = "all_history.json"
 file_code_name = "main.py"
 
